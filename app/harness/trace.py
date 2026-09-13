@@ -7,6 +7,12 @@ class TraceCollector:
     def __init__(self) -> None:
         self._events: list[TraceEvent] = []
 
+    @classmethod
+    def from_snapshot(cls, events: list[TraceEvent]) -> "TraceCollector":
+        collector = cls()
+        collector._events = [event.model_copy(deep=True) for event in events]
+        return collector
+
     def record(
         self, iteration: int, event_type: TraceEventType, name: str,
         success: bool, summary: str,

@@ -1,6 +1,6 @@
 # AI Agent Harness Platform
 
-软件工程任务执行与智能体运行平台。目前完成 Stage 1 基础骨架、Stage 2 Harness Core 和 Stage 3 受控 CLI / MCP 工具接入。任务 API 只保存记录，不接真实模型。Stage 3 设计与边界见 [阶段文档](docs/stage3.md)。
+软件工程任务执行与智能体运行平台。目前完成 Stage 1–4：基础骨架、Harness Core、受控 CLI / MCP 工具，以及 LangGraph Workflow + Checkpoint / Resume。任务 API 只保存记录，不接真实模型。最新设计与边界见 [Stage 4 文档](docs/stage4.md)。
 
 ## 当前技术栈
 
@@ -80,8 +80,8 @@ Stage 1 有 5 个 API 测试，每个测试使用独立临时 SQLite 数据库�
 - Stage 1：FastAPI + Harness Foundation（已完成）
 - Stage 2：Harness Core（已完成）
 - Stage 3：CLI + MCP（已完成）
-- Stage 4：LangGraph Workflow + Checkpoint（未实现）
+- Stage 4：LangGraph Workflow + Checkpoint（已完成）
 - Stage 5：Multi-Agent + Retry + Approval（未实现）
 - Stage 6：E2E + UI + README（未实现，当前仅有基础 README）
 
-本阶段未实现 LangGraph Workflow、Multi-Agent、Checkpoint、Retry / Recovery、Human Approval、真实 Qwen 调用及前端。CLI / MCP 通过 Stage 3 集成测试验证。
+本阶段未实现 Multi-Agent、自动 Retry / Recovery、Human Approval、真实 Qwen 调用及前端。Workflow 通过 Stage 4 的 Scripted Handler 和持久化恢复测试验证。

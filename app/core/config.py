@@ -18,6 +18,8 @@ class Settings(BaseSettings):
     cli_max_output_chars: int = Field(default=20000, gt=0)
     mcp_max_read_chars: int = Field(default=20000, gt=0)
     mcp_max_list_files: int = Field(default=200, gt=0)
+    checkpoint_database_url: str = "sqlite:///./workflow-checkpoints.db"
+    workflow_max_iterations: int = Field(default=3, ge=1, le=100)
 
 
 @lru_cache
