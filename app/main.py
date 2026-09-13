@@ -5,10 +5,14 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from app.api.routes.tasks import router as tasks_router
+from app.api.routes.approvals import router as approvals_router
 from app.core.config import Settings, get_settings
 from app.core.exceptions import TaskNotFoundError
 from app.db.base import Base
 from app.db.session import create_db_engine
+from app.governance.approval import ApprovalConflict, ApprovalNotFound, ApprovalService
+from app.tools.workspace import WorkspacePolicy
+from app.tools.write import WriteTextFile
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -18,6 +22,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(application: FastAPI):
         engine = create_db_engine(settings.database_url)
         application.state.engine = engine
+        application.state.approvals = ApprovalService(engine, WriteTextFile(WorkspacePolicy(settings.workspace_root), settings.write_max_chars), settings.approval_encryption_key)
         try:
             Base.metadata.create_all(engine)
             yield
@@ -47,6 +52,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         }
 
     application.include_router(tasks_router)
+    application.include_router(approvals_router)
+
+    @application.exception_handler(ApprovalNotFound)
+    async def approval_not_found(request: Request, exc: ApprovalNotFound):
+        return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+    @application.exception_handler(ApprovalConflict)
+    async def approval_conflict(request: Request, exc: ApprovalConflict):
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
     return application
 
 

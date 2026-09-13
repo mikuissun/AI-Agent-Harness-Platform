@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     mcp_max_list_files: int = Field(default=200, gt=0)
     checkpoint_database_url: str = "sqlite:///./workflow-checkpoints.db"
     workflow_max_iterations: int = Field(default=3, ge=1, le=100)
+    retry_max_attempts: int = Field(default=2, ge=1, le=5)
+    write_max_chars: int = Field(default=20000, ge=1, le=1000000)
+    approval_encryption_key: SecretStr | None = None
 
 
 @lru_cache

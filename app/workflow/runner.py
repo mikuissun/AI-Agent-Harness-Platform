@@ -2,6 +2,7 @@ from copy import deepcopy
 from uuid import uuid4
 
 from langsmith import tracing_context
+from langgraph.types import Command
 
 from app.core.config import Settings
 from app.harness.errors import HarnessError
@@ -25,7 +26,7 @@ class WorkflowRunner:
 
     @staticmethod
     def _config(thread_id: str, max_iterations: int) -> dict:
-        return {"configurable": {"thread_id": thread_id}, "recursion_limit": 2 * max_iterations + 10}
+        return {"configurable": {"thread_id": thread_id}, "recursion_limit": 4 * max_iterations + 10}
 
     @staticmethod
     def _validate(thread_id: str, interrupt_after: NodeName | None) -> None:
@@ -47,6 +48,8 @@ class WorkflowRunner:
         await graph.ainvoke(initial, config, interrupt_after=[interrupt_after] if interrupt_after else None, durability="sync")
         snapshot = await graph.aget_state(config)
         state = dict(snapshot.values)
+        if state.get("pending_approval_id"):
+            return self._result(state)
         if snapshot.next and state["status"] not in {"COMPLETED", "FAILED"}:
             state["status"] = "INTERRUPTED"
             trace = restore_trace(state)
@@ -94,6 +97,10 @@ class WorkflowRunner:
                     return self._result(state)
                 if state["status"] != "INTERRUPTED" or not snapshot.next:
                     raise HarnessError("checkpoint_not_resumable")
+                if state.get("pending_approval_id"):
+                    self.handler.check_approval(state)
+                    config = self._config(thread_id, state["max_iterations"])
+                    return await self._invoke(graph, config, Command(resume=True), interrupt_after)
                 trace = restore_trace(state)
                 trace.record(state["iteration"], TraceEventType.WORKFLOW_RESUMED, "workflow", True, "Workflow resumed")
                 state.update(status="RUNNING", trace=trace_data(trace))

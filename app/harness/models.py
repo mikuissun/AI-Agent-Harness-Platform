@@ -52,10 +52,18 @@ class ToolCallAction(BaseModel):
 HarnessAction = Annotated[FinalAction | ToolCallAction, Field(discriminator="type")]
 
 
+class ToolRiskLevel(StrEnum):
+    READ_ONLY = "READ_ONLY"
+    SAFE_EXECUTION = "SAFE_EXECUTION"
+    WRITE = "WRITE"
+    PRIVILEGED = "PRIVILEGED"
+
+
 class ToolDefinition(BaseModel):
     name: str = Field(min_length=1, max_length=64, pattern=r"^[a-zA-Z][a-zA-Z0-9_.-]*$")
     description: str
     input_schema: dict[str, JsonValue]
+    risk_level: ToolRiskLevel = ToolRiskLevel.READ_ONLY
 
 
 class ToolExecutionResult(BaseModel):
@@ -84,6 +92,14 @@ class TraceEventType(StrEnum):
     WORKFLOW_RESUMED = "WORKFLOW_RESUMED"
     WORKFLOW_COMPLETED = "WORKFLOW_COMPLETED"
     WORKFLOW_FAILED = "WORKFLOW_FAILED"
+    AGENT_STARTED = "AGENT_STARTED"
+    AGENT_COMPLETED = "AGENT_COMPLETED"
+    RETRY_STARTED = "RETRY_STARTED"
+    RETRY_EXHAUSTED = "RETRY_EXHAUSTED"
+    APPROVAL_REQUIRED = "APPROVAL_REQUIRED"
+    APPROVAL_APPROVED = "APPROVAL_APPROVED"
+    APPROVAL_REJECTED = "APPROVAL_REJECTED"
+    PERMISSION_DENIED = "PERMISSION_DENIED"
 
 
 class TraceEvent(BaseModel):

@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import Annotated, Literal, TypedDict
+from typing import Annotated, Literal, NotRequired, TypedDict
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -39,6 +39,8 @@ class WorkflowState(TypedDict):
     iteration: int
     max_iterations: int
     trace: list[dict]
+    pending_approval_id: NotRequired[str | None]
+    review_decision: NotRequired[str | None]
 
 
 class NodeOutcome(BaseModel):
@@ -49,6 +51,10 @@ class NodeOutcome(BaseModel):
     summary: str = Field(max_length=2000)
     plan: list[Annotated[str, Field(min_length=1, max_length=500)]] = Field(default_factory=list, max_length=20)
     tool_result: ToolExecutionResult | None = None
+    decision: Literal["PASS", "NEEDS_FIX", "FAILED"] | None = None
+    fatal_error: str | None = None
+    pending_approval_id: str | None = None
+    events: list[dict] | None = None
 
 
 class WorkflowRunResult(BaseModel):

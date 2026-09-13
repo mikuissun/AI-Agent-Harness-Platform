@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.core.config import Settings
 from app.harness.errors import HarnessError
-from app.harness.models import ToolDefinition, ToolExecutionResult
+from app.harness.models import ToolDefinition, ToolExecutionResult, ToolRiskLevel
 from app.tools.process import run_process
 from app.tools.workspace import WorkspacePolicy
 
@@ -54,7 +54,8 @@ class CliToolAdapter:
 
     @property
     def definition(self) -> ToolDefinition:
-        return ToolDefinition(name=self.spec.name, description=self.spec.description, input_schema=self.spec.input_schema)
+        return ToolDefinition(name=self.spec.name, description=self.spec.description, input_schema=self.spec.input_schema,
+                              risk_level=ToolRiskLevel.SAFE_EXECUTION if self.spec.name == "run_pytest" else ToolRiskLevel.READ_ONLY)
 
     def _arguments(self, payload: Arguments) -> list[str]:
         if isinstance(payload, DiffArguments):

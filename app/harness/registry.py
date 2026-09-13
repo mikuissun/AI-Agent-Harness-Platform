@@ -3,7 +3,17 @@ from jsonschema.exceptions import SchemaError
 
 from app.harness.errors import DuplicateToolError, HarnessError, UnknownToolError
 from app.harness.interfaces import ToolAdapter
-from app.harness.models import ToolDefinition
+from app.harness.models import ToolDefinition, ToolExecutionResult, ToolRiskLevel
+
+
+class ApprovalGuard:
+    """Registry access cannot directly execute a registered high-risk adapter."""
+
+    def __init__(self, definition: ToolDefinition):
+        self.definition = definition.model_copy(deep=True)
+
+    async def execute(self, arguments: dict[str, object]) -> ToolExecutionResult:
+        return ToolExecutionResult(success=False, error="permission_denied")
 
 
 class ToolRegistry:
@@ -35,6 +45,8 @@ class ToolRegistry:
 
     def get(self, name: str) -> ToolAdapter:
         try:
+            if self._definitions[name].risk_level in {ToolRiskLevel.WRITE, ToolRiskLevel.PRIVILEGED}:
+                return ApprovalGuard(self._definitions[name])
             return self._tools[name]
         except KeyError:
             raise UnknownToolError() from None

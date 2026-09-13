@@ -43,5 +43,5 @@ class WorkspacePolicy:
         return (
             name in {".git", ".ssh", ".aws", ".azure", "id_rsa", "id_ed25519"}
             or (name.startswith(".env") and name != ".env.example")
-            or name.endswith((".pem", ".key", ".pfx", ".p12"))
+            or name.endswith((".pem", ".key", ".pfx", ".p12", ".approval-key"))
         )
