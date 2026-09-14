@@ -7,6 +7,15 @@ from app.harness.interfaces import ModelAdapter
 from app.harness.models import FinalAction, HarnessContext, ToolCallAction, ToolDefinition
 
 
+ANALYZE_MAX_TOOL_CALLS = 2
+DEVELOPER_MAX_TOOL_CALLS = 4
+TESTER_MAX_TOOL_CALLS = 2
+REVIEWER_MAX_TOOL_CALLS = 0
+PHASE_TOOL_BUDGETS = {"ANALYZE": ANALYZE_MAX_TOOL_CALLS, "PLAN": 0,
+                      "EXECUTE": DEVELOPER_MAX_TOOL_CALLS, "FIX": DEVELOPER_MAX_TOOL_CALLS,
+                      "TEST": TESTER_MAX_TOOL_CALLS, "REVIEW": REVIEWER_MAX_TOOL_CALLS}
+
+
 class AgentRole(StrEnum):
     PLANNER = "PLANNER"
     DEVELOPER = "DEVELOPER"
@@ -28,6 +37,7 @@ class AgentContext(BaseModel):
     workflow_state: dict
     available_tools: list[ToolDefinition]
     attempt: int = 1
+    tool_feedback: bool = False
 
 
 class AgentResult(BaseModel):
@@ -46,16 +56,16 @@ class RoleAgent:
     def __init__(self, model: ModelAdapter):
         self.model = model
 
-    async def run(self, context: AgentContext) -> AgentResult:
+    async def run(self, context: AgentContext, history=None) -> AgentResult:
         state = context.workflow_state
         action = await self.model.generate(HarnessContext(
             task_id=context.task_id, run_id=context.run_id, instruction=context.instruction,
             iteration=state["iteration"], max_iterations=state["max_iterations"],
             metadata={"role": self.role.value, "phase": state["phase"], "attempt": context.attempt,
                       "workflow_state": {key: state.get(key) for key in ("analysis_result", "plan", "execution_result", "test_result", "review_result")}},
-        ), context.available_tools, [])
+        ), context.available_tools, history or [])
         if isinstance(action, ToolCallAction):
-            if self.role == AgentRole.REVIEWER:
+            if self.role == AgentRole.REVIEWER and not context.tool_feedback:
                 raise ValueError("review_decision_required")
             call = ToolCallAction.model_validate(action.model_dump(warnings="error"))
             return AgentResult(success=True, output="Tool operation requested", requested_tool_calls=[call])

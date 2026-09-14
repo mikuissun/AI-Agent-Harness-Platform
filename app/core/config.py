@@ -12,7 +12,11 @@ class Settings(BaseSettings):
     app_env: str = "local"
     database_url: str = "sqlite:///./tasks.db"
     dashscope_api_key: SecretStr | None = None
-    llm_model: str | None = None
+    llm_model: str = "qwen-plus"
+    dashscope_base_url: str = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+    llm_timeout_seconds: float = Field(default=45, gt=0, le=120)
+    llm_max_tokens: int = Field(default=1200, ge=128, le=4096)
+    llm_max_calls: int = Field(default=16, ge=1, le=30)
     workspace_root: Path = Path(".")
     cli_timeout_seconds: float = Field(default=20.0, gt=0, allow_inf_nan=False)
     cli_max_output_chars: int = Field(default=20000, gt=0)

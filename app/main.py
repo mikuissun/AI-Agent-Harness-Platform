@@ -6,6 +6,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes.tasks import router as tasks_router
 from app.api.routes.approvals import router as approvals_router
+from app.api.routes.runs import router as runs_router
 from app.core.config import Settings, get_settings
 from app.core.exceptions import TaskNotFoundError
 from app.db.base import Base
@@ -13,6 +14,8 @@ from app.db.session import create_db_engine
 from app.governance.approval import ApprovalConflict, ApprovalNotFound, ApprovalService
 from app.tools.workspace import WorkspacePolicy
 from app.tools.write import WriteTextFile
+from app.services.runs import RunConflict, RunNotFound, RunService
+from app.harness.errors import HarnessError
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -23,6 +26,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         engine = create_db_engine(settings.database_url)
         application.state.engine = engine
         application.state.approvals = ApprovalService(engine, WriteTextFile(WorkspacePolicy(settings.workspace_root), settings.write_max_chars), settings.approval_encryption_key)
+        application.state.runs = RunService(settings, engine, application.state.approvals)
         try:
             Base.metadata.create_all(engine)
             yield
@@ -53,6 +57,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application.include_router(tasks_router)
     application.include_router(approvals_router)
+    application.include_router(runs_router)
+
+    @application.exception_handler(RunNotFound)
+    async def run_not_found(request: Request, exc: RunNotFound):
+        return JSONResponse(status_code=404, content={"detail": "run_not_found"})
+
+    @application.exception_handler(RunConflict)
+    async def run_conflict(request: Request, exc: RunConflict):
+        return JSONResponse(status_code=409, content={"detail": str(exc)})
+
+    @application.exception_handler(HarnessError)
+    async def harness_error(request: Request, exc: HarnessError):
+        return JSONResponse(status_code=503, content={"detail": "runtime_unavailable"})
 
     @application.exception_handler(ApprovalNotFound)
     async def approval_not_found(request: Request, exc: ApprovalNotFound):
